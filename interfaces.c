@@ -3,26 +3,26 @@
 
 /* Чтение строки из файла (обрезает перевод строки) */
 int file_read_string(const char *path, char *buf, size_t size) {
-    FILE *f = fopen(path, "r");
+	FILE *f = fopen(path, "r");
     if (!f) return -1;
-    if (fgets(buf, size, f)) {
-        char *nl = strchr(buf, '\n');
-        if (nl) *nl = '\0';
-        fclose(f);
-        return 0;
-    }
+    int ok = fgets(buf, sz, f) != NULL && !ferror(f);
     fclose(f);
-    return -1;
+    if (!ok) return -1;
+    char *nl = strchr(buf, '\n');
+    if (nl) *nl = '\0';
+    return 0;
 }
 
 /* Чтение целого числа из файла */
 int file_read_int(const char *path, int *value) {
-    char buf[32];
-    if (file_read_string(path, buf, sizeof(buf)) == 0) {
-        *value = atoi(buf);
-        return 0;
-    }
-    return -1;
+	char buf[32];
+    if (file_read_string(path, buf, sizeof(buf)) != 0) return -1;
+    char *end;
+    errno = 0;
+    long v = strtol(buf, &end, 10);
+    if (errno || end == buf || *end != '\0') return -1;
+    *val = (int)v;
+    return 0;
 }
 
 /* Получение IP-адресов интерфейса (IPv4 и IPv6) через getifaddrs */
@@ -63,8 +63,8 @@ void show_interfaces(void) {
     char path[MAX_PATH], state[32], mac[32], ip_list[256];
     int mtu;
 
-    printf("%-12s %-12s %-20s %-8s %-30s\n", "IFACE", "STATE", "MAC", "MTU", "IP_ADDRESSES");
-    printf("%-12s %-12s %-20s %-8s %-30s\n", "-----", "-----", "---", "---", "------------");
+    fprintf(stdout,"%-12s %-12s %-20s %-8s %-30s\n", "IFACE", "STATE", "MAC", "MTU", "IP_ADDRESSES");
+    fprintf(stdout,"%-12s %-12s %-20s %-8s %-30s\n", "-----", "-----", "---", "---", "------------");
 
     d = opendir("/sys/class/net");
     if (!d) {
@@ -87,7 +87,7 @@ void show_interfaces(void) {
         get_ip_addresses(dir->d_name, ip_list, sizeof(ip_list));
         if (strlen(ip_list) == 0) strcpy(ip_list, "-");
 
-        printf("%-12s %-12s %-20s %-8d %-30s\n", dir->d_name, state, mac, mtu, ip_list);
+        fprintf(stdout, "%-12s %-12s %-20s %-8d %-30s\n", dir->d_name, state, mac, mtu, ips);
     }
     closedir(d);
 }

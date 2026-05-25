@@ -42,7 +42,7 @@ void collect_diagnostics(void) {
     
     #undef RUN
     
-    // Чтение файлов /proc напрямую
+    // Чтение файлов 
     fprintf(out, "\n=== /proc/net/route ===\n");
     FILE *proc = fopen("/proc/net/route", "r");
     if (proc) {
@@ -61,7 +61,7 @@ void collect_diagnostics(void) {
     
     fclose(out);
     
-    // Перемещаем и создаем архив
+    // Создаем архив
     char final_path[512];
     snprintf(final_path, sizeof(final_path), "%s/diagnostics.txt", dest);
     rename(tmpfile, final_path);
@@ -71,7 +71,7 @@ void collect_diagnostics(void) {
     
     char cmd[1024];
     snprintf(cmd, sizeof(cmd), "cd /tmp && tar czf %s %s 2>/dev/null", archive, dirname);
-    system(cmd);  // tar оставляем, это безопасно
+    system(cmd); 
     
     snprintf(cmd, sizeof(cmd), "rm -rf /tmp/%s", dirname);
     system(cmd);

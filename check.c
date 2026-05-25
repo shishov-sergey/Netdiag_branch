@@ -1,68 +1,56 @@
 #include "netdiag.h"
 #include <sys/wait.h>
 
+/* Проверка интерфейса линка */
 void check_link(const char *iface) {
     char path[MAX_PATH];
     snprintf(path, sizeof(path), "/sys/class/net/%s/operstate", iface);
     char state[32];
     if (file_read_string(path, state, sizeof(state)) != 0) {
-        printf("Interface '%s' does not exist or cannot be read.\n", iface);
+        fprintf(stderr, "Interface '%s' does not exist or cannot be read.\n", iface);
         return;
     }
 
-    printf("Interface: %s\n", iface);
-    printf("State: %s\n", state);
+    fprintf(stdout,"Interface: %s\n", iface);
+    fprintf(stdout,"State: %s\n", state);
 
-    // Дополнительно проверим carrier
+    // Проверка carrier
     snprintf(path, sizeof(path), "/sys/class/net/%s/carrier", iface);
     int carrier;
     if (file_read_int(path, &carrier) == 0) {
-        printf("Carrier: %s\n", carrier ? "YES (cable connected)" : "NO (cable disconnected)");
+        fprintf(stdout, "Carrier: %s\n", carrier ? "YES (cable connected)" : "NO (cable disconnected)");
     }
 
-    // Скорость (если интерфейс UP)
+    // Скорость 
     if (strcmp(state, "up") == 0) {
         snprintf(path, sizeof(path), "/sys/class/net/%s/speed", iface);
         int speed;
         if (file_read_int(path, &speed) == 0 && speed > 0) {
-            printf("Speed: %d Mbps\n", speed);
+            fprintf(stdout, "Speed: %d Mbps\n", speed);
         }
     }
 }
 
+/* Валидация IPv4 */
+static int is_valid_ipv4(const char *ip) {
+    unsigned int a,b,c,d; return sscanf(ip, "%u.%u.%u.%u", &a,&b,&c,&d) == 4 && a<256 && b<256 && c<256 && d<256;
+}
+
+/* Проверка шлюза: через popen */
 void check_gateway(const char *ip) {
-    char cmd[MAX_LINE];
-    snprintf(cmd, sizeof(cmd), "ping -c 2 -W 2 %s > /tmp/netdiag_ping.tmp 2>&1", ip);
-    int ret = system(cmd);
+	if (!is_valid_ipv4(ip)) { fprintf(stderr, "Invalid IPv4 address: %s\n", ip); return; }
 
-    FILE *f = fopen("/tmp/netdiag_ping.tmp", "r");
-    if (!f) {
-        printf("Failed to execute ping.\n");
-        return;
+    char cmd[128]; snprintf(cmd, sizeof(cmd), "ping -c 2 -W 2 -q %s 2>&1", ip);
+    FILE *p = popen(cmd, "r"); if (!p) { fprintf(stderr, "ping failed: %s\n", strerror(errno)); return; }
+
+    char line[256]; int recv = 0, sent = 0; float loss = 100, rtt[3] = {0};
+    while (fgets(line, sizeof(line), p)) {
+        if (strstr(line, "received")) sscanf(line, "%d packets transmitted, %d received", &sent, &recv);
+        if (strstr(line, "rtt min/avg/max")) sscanf(line, "%*s %*s %f/%f/%f", &rtt[0], &rtt[1], &rtt[2]);
     }
+    pclose(p);
+    if (sent > 0) loss = 100.0f - (recv * 100.0f / sent);
 
-    char line[MAX_LINE];
-    int received = 0;
-    float loss = 100.0;
-    float rtt_min = 0, rtt_avg = 0, rtt_max = 0;
-
-    while (fgets(line, sizeof(line), f)) {
-        if (strstr(line, "received")) {
-            sscanf(line, "%*d packets transmitted, %d received", &received);
-            int transmitted = 0;
-            sscanf(line, "%d packets transmitted", &transmitted);
-            if (transmitted > 0) loss = 100.0 - (received * 100.0 / transmitted);
-        }
-        if (strstr(line, "rtt min/avg/max")) {
-            sscanf(line, "%*s %*s %f/%f/%f", &rtt_min, &rtt_avg, &rtt_max);
-        }
-    }
-    fclose(f);
-    remove("/tmp/netdiag_ping.tmp");
-
-    printf("Gateway: %s\n", ip);
-    printf("Ping result: %d packets received, %.1f%% loss\n", received, loss);
-    if (rtt_avg > 0) {
-        printf("RTT (min/avg/max) = %.3f / %.3f / %.3f ms\n", rtt_min, rtt_avg, rtt_max);
-    }
+    fprintf(stdout, "Gateway: %s\nPing: %d/%d packets received, %.1f%% loss\n", ip, recv, sent, loss);
+    if (rtt[1] > 0) fprintf(stdout, "RTT (min/avg/max): %.3f/%.3f/%.3f ms\n", rtt[0], rtt[1], rtt[2]);
 }
