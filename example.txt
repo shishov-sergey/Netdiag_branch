@@ -1,0 +1,21 @@
+//Пример запуска файла bash.sh на виртуальной машине VB
+
+IFACE        STATE        MAC                  MTU      IP_ADDRESSES                  
+-----        -----        ---                  ---      ------------                  
+enp0s3.100   up           08:00:27:75:0a:39    1500     fe80::a00:27ff:fe75:a39       
+lo           unknown      00:00:00:00:00:00    65536    127.0.0.1, ::1                
+enp0s3       up           08:00:27:75:0a:39    1500     10.0.2.15, fd17:625c:f037:2:a00:27ff:fe75:a39, fe80::a00:27ff:fe75:a39
+IFACE        DESTINATION        GATEWAY            NETMASK            FLAGS
+-----        -----------        -------            -------            -----
+enp0s3       0.0.0.0            10.0.2.2           3.0.0.0            0x0000
+enp0s3       10.0.2.0           0.0.0.0            1.0.0.0            0x0000
+VLAN configuration:
+VLAN Dev name	 | VLAN ID
+enp0s3.100     | 100  | enp0s3
+Interface: enp0s3
+State: up
+Carrier: YES (cable connected)
+Speed: 1000 Mbps
+Gateway: 192.168.1.1
+Ping: 0/2 packets received, 100.0% loss
+Diagnostic archive created: /tmp/netdiag_20260525_122538.tar.gz
