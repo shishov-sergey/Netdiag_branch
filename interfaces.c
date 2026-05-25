@@ -1,11 +1,11 @@
 #include "netdiag.h"
 #include <ctype.h>
 
-/* Чтение строки из файла (обрезает перевод строки) */
+/* Чтение строки из файла */
 int file_read_string(const char *path, char *buf, size_t size) {
 	FILE *f = fopen(path, "r");
     if (!f) return -1;
-    int ok = fgets(buf, sz, f) != NULL && !ferror(f);
+    int ok = fgets(buf, size, f) != NULL && !ferror(f);
     fclose(f);
     if (!ok) return -1;
     char *nl = strchr(buf, '\n');
@@ -18,14 +18,14 @@ int file_read_int(const char *path, int *value) {
 	char buf[32];
     if (file_read_string(path, buf, sizeof(buf)) != 0) return -1;
     char *end;
-    errno = 0;
+    int errno = 0;
     long v = strtol(buf, &end, 10);
     if (errno || end == buf || *end != '\0') return -1;
-    *val = (int)v;
+    *value = (int)v;
     return 0;
 }
 
-/* Получение IP-адресов интерфейса (IPv4 и IPv6) через getifaddrs */
+/* Получение IP-адресов интерфейса  */
 void get_ip_addresses(const char *iface, char *buffer, size_t buf_size) {
     struct ifaddrs *ifaddr, *ifa;
     char ip_str[INET6_ADDRSTRLEN];
@@ -87,7 +87,7 @@ void show_interfaces(void) {
         get_ip_addresses(dir->d_name, ip_list, sizeof(ip_list));
         if (strlen(ip_list) == 0) strcpy(ip_list, "-");
 
-        fprintf(stdout, "%-12s %-12s %-20s %-8d %-30s\n", dir->d_name, state, mac, mtu, ips);
+        fprintf(stdout, "%-12s %-12s %-20s %-8d %-30s\n", dir->d_name, state, mac, mtu, ip_list);
     }
     closedir(d);
 }
